@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">محمل الروايات</string>
+    <string name="search_hint">أدخل عنوان الرواية...</string>
+    <string name="read">قراءة</string>
+    <string name="download">تحميل EPUB</string>
+    <string name="loading">جاري التحميل...</string>
+</resources>
