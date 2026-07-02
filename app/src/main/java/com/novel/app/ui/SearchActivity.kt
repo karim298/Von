@@ -13,8 +13,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -34,6 +32,7 @@ class SearchActivity : AppCompatActivity() {
     private var translationEnabled = false
     private val translatedTitles = mutableMapOf<String, String>()
     private val translatedIntros = mutableMapOf<String, String>()
+    private var novels = listOf<Novel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,12 +70,12 @@ class SearchActivity : AppCompatActivity() {
         if (item.itemId == 1) {
             translationEnabled = !translationEnabled
             prefs.saveTranslationEnabled(translationEnabled)
-            if (translationEnabled && adapter.itemCount > 0) {
+            if (translationEnabled && novels.isNotEmpty()) {
                 TranslateResultsTask().execute()
             } else {
                 translatedTitles.clear()
                 translatedIntros.clear()
-                adapter.submitList(adapter.currentList)
+                adapter.notifyDataSetChanged()
             }
             invalidateOptionsMenu()
             return true
@@ -84,11 +83,7 @@ class SearchActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // =============================================================
-    // AsyncTasks
-    // =============================================================
-
-    private inner class SearchTask : AsyncTask<String, Void, List<Novel>?>() {
+    inner class SearchTask : AsyncTask<String, Void, List<Novel>?>() {
         override fun doInBackground(vararg params: String): List<Novel>? {
             return try {
                 ApiClient.searchNovels(params[0], 1)
@@ -101,6 +96,7 @@ class SearchActivity : AppCompatActivity() {
             if (result == null) {
                 Toast.makeText(this@SearchActivity, "فشل البحث", Toast.LENGTH_SHORT).show()
             } else {
+                novels = result
                 adapter.submitList(result)
                 if (translationEnabled) {
                     TranslateResultsTask().execute()
@@ -109,11 +105,10 @@ class SearchActivity : AppCompatActivity() {
         }
     }
 
-    private inner class TranslateResultsTask : AsyncTask<Void, Void, Void>() {
+    inner class TranslateResultsTask : AsyncTask<Void, Void, Void>() {
         override fun doInBackground(vararg params: Void): Void? {
-            val list = adapter.currentList ?: return null
             try {
-                for (novel in list) {
+                for (novel in novels) {
                     if (!translatedTitles.containsKey(novel.articleId)) {
                         translatedTitles[novel.articleId] = TranslationService.translateToArabic(novel.title)
                     }
@@ -128,17 +123,20 @@ class SearchActivity : AppCompatActivity() {
         }
 
         override fun onPostExecute(result: Void?) {
-            adapter.submitList(adapter.currentList)
+            adapter.notifyDataSetChanged()
         }
     }
 
-    // =============================================================
-    // NovelAdapter - محول RecyclerView
-    // =============================================================
-
-    private inner class NovelAdapter(
+    inner class NovelAdapter(
         private val onItemClick: (Novel) -> Unit
-    ) : ListAdapter<Novel, NovelAdapter.NovelViewHolder>(DiffCallback()) {
+    ) : RecyclerView.Adapter<NovelAdapter.NovelViewHolder>() {
+
+        private var items: List<Novel> = emptyList()
+
+        fun submitList(newList: List<Novel>) {
+            items = newList
+            notifyDataSetChanged()
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NovelViewHolder {
             val view = LayoutInflater.from(parent.context)
@@ -147,7 +145,7 @@ class SearchActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: NovelViewHolder, position: Int) {
-            val novel = getItem(position)
+            val novel = items[position]
             val title = if (translationEnabled && translatedTitles.containsKey(novel.articleId)) {
                 translatedTitles[novel.articleId]!!
             } else {
@@ -156,11 +154,9 @@ class SearchActivity : AppCompatActivity() {
             holder.bind(novel, title)
         }
 
-        // =============================================================
-        // NovelViewHolder - حامل العنصر
-        // =============================================================
+        override fun getItemCount(): Int = items.size
 
-        private inner class NovelViewHolder(
+        inner class NovelViewHolder(
             itemView: View,
             private val onItemClick: (Novel) -> Unit
         ) : RecyclerView.ViewHolder(itemView) {
@@ -182,20 +178,6 @@ class SearchActivity : AppCompatActivity() {
                     .into(cover)
 
                 itemView.setOnClickListener { onItemClick(novel) }
-            }
-        }
-
-        // =============================================================
-        // DiffCallback - مقارنة العناصر
-        // =============================================================
-
-        private class DiffCallback : DiffUtil.ItemCallback<Novel>() {
-            override fun areItemsTheSame(oldItem: Novel, newItem: Novel): Boolean {
-                return oldItem.articleId == newItem.articleId
-            }
-
-            override fun areContentsTheSame(oldItem: Novel, newItem: Novel): Boolean {
-                return oldItem == newItem
             }
         }
     }
