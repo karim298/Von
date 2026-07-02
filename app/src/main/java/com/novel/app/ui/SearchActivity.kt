@@ -85,10 +85,10 @@ class SearchActivity : AppCompatActivity() {
     }
 
     // =============================================================
-    // مهام الخلفية
+    // AsyncTasks
     // =============================================================
 
-    inner class SearchTask : AsyncTask<String, Void, List<Novel>?>() {
+    private inner class SearchTask : AsyncTask<String, Void, List<Novel>?>() {
         override fun doInBackground(vararg params: String): List<Novel>? {
             return try {
                 ApiClient.searchNovels(params[0], 1)
@@ -109,7 +109,7 @@ class SearchActivity : AppCompatActivity() {
         }
     }
 
-    inner class TranslateResultsTask : AsyncTask<Void, Void, Void>() {
+    private inner class TranslateResultsTask : AsyncTask<Void, Void, Void>() {
         override fun doInBackground(vararg params: Void): Void? {
             val list = adapter.currentList ?: return null
             try {
@@ -133,11 +133,12 @@ class SearchActivity : AppCompatActivity() {
     }
 
     // =============================================================
-    // NovelAdapter - المحول الرئيسي (inner class)
+    // NovelAdapter - محول RecyclerView
     // =============================================================
 
-    inner class NovelAdapter(private val onItemClick: (Novel) -> Unit) :
-        ListAdapter<Novel, NovelAdapter.NovelViewHolder>(NovelDiffCallback()) {
+    private inner class NovelAdapter(
+        private val onItemClick: (Novel) -> Unit
+    ) : ListAdapter<Novel, NovelAdapter.NovelViewHolder>(DiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NovelViewHolder {
             val view = LayoutInflater.from(parent.context)
@@ -156,10 +157,10 @@ class SearchActivity : AppCompatActivity() {
         }
 
         // =============================================================
-        // NovelViewHolder - حامل العنصر (inner class)
+        // NovelViewHolder - حامل العنصر
         // =============================================================
 
-        inner class NovelViewHolder(
+        private inner class NovelViewHolder(
             itemView: View,
             private val onItemClick: (Novel) -> Unit
         ) : RecyclerView.ViewHolder(itemView) {
@@ -185,10 +186,10 @@ class SearchActivity : AppCompatActivity() {
         }
 
         // =============================================================
-        // NovelDiffCallback - كلاس مستقل داخل NovelAdapter
+        // DiffCallback - مقارنة العناصر
         // =============================================================
 
-        class NovelDiffCallback : DiffUtil.ItemCallback<Novel>() {
+        private class DiffCallback : DiffUtil.ItemCallback<Novel>() {
             override fun areItemsTheSame(oldItem: Novel, newItem: Novel): Boolean {
                 return oldItem.articleId == newItem.articleId
             }
