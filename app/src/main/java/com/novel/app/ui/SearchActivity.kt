@@ -25,10 +25,12 @@ import com.novel.app.utils.PreferencesService
 import com.novel.app.utils.TranslationService
 
 class SearchActivity : AppCompatActivity() {
+
     private lateinit var searchInput: EditText
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: NovelAdapter
     private lateinit var prefs: PreferencesService
+
     private var translationEnabled = false
     private val translatedTitles = mutableMapOf<String, String>()
     private val translatedIntros = mutableMapOf<String, String>()
@@ -82,6 +84,10 @@ class SearchActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    // =============================================================
+    // مهام الخلفية (AsyncTasks)
+    // =============================================================
+
     inner class SearchTask : AsyncTask<String, Void, List<Novel>?>() {
         override fun doInBackground(vararg params: String): List<Novel>? {
             return try {
@@ -127,8 +133,9 @@ class SearchActivity : AppCompatActivity() {
     }
 
     // =============================================================
-    // NovelAdapter - تعريفه داخل class SearchActivity
+    // NovelAdapter - المحول الرئيسي
     // =============================================================
+
     inner class NovelAdapter(private val onItemClick: (Novel) -> Unit) :
         ListAdapter<Novel, NovelAdapter.NovelViewHolder>(NovelDiffCallback()) {
 
@@ -148,7 +155,10 @@ class SearchActivity : AppCompatActivity() {
             holder.bind(novel, title)
         }
 
-        // ViewHolder الداخلي
+        // =============================================================
+        // NovelViewHolder - حامل العنصر
+        // =============================================================
+
         inner class NovelViewHolder(
             itemView: View,
             private val onItemClick: (Novel) -> Unit
@@ -174,7 +184,10 @@ class SearchActivity : AppCompatActivity() {
             }
         }
 
-        // DiffUtil Callback
+        // =============================================================
+        // NovelDiffCallback - مقارنة العناصر
+        // =============================================================
+
         class NovelDiffCallback : DiffUtil.ItemCallback<Novel>() {
             override fun areItemsTheSame(oldItem: Novel, newItem: Novel): Boolean {
                 return oldItem.articleId == newItem.articleId
