@@ -24,6 +24,18 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
 
+    - name: Create debug keystore
+      run: |
+        mkdir -p ~/.android
+        keytool -genkey -v -keystore ~/.android/debug.keystore \
+          -alias androiddebugkey \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass android \
+          -keypass android \
+          -dname "CN=Android Debug, O=Android, C=US"
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
@@ -42,7 +54,6 @@ jobs:
         fi
         echo "✅ Found APK at: $APK_PATH"
         echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-        echo "APK_SIZE=$(du -h "$APK_PATH" | cut -f1)" >> $GITHUB_OUTPUT
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

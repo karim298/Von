@@ -29,12 +29,32 @@ android {
     }
 
     // =============================================================
-    // buildTypes - إضافة نوع البناء release و debug
+    // تكوين التوقيع (Signing)
     // =============================================================
+    signingConfigs {
+        // تكوين debug باستخدام debug.keystore الافتراضي
+        create("debug") {
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+
+        // (اختياري) تكوين release - يمكنك تفعيله لاحقاً باستخدام keystore خاص
+        // create("release") {
+        //     storeFile = file("my-release-key.jks")
+        //     storePassword = System.getenv("KEYSTORE_PASSWORD")
+        //     keyAlias = System.getenv("KEY_ALIAS")
+        //     keyPassword = System.getenv("KEY_PASSWORD")
+        // }
+    }
+
     buildTypes {
-        // نوع الإصدار (Release) - يستخدم توقيع debug مؤقتاً
-        // ⚠️ ملاحظة: هذا مناسب للاختبار فقط. للإصدار النهائي،
-        //    يجب إنشاء keystore خاص وتوقيع التطبيق بشكل آمن.
+        debug {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
         release {
             isMinifyEnabled = false
             isShrinkResources = false
@@ -42,17 +62,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // استخدام توقيع debug مؤقتاً (للاختبار فقط)
+            // استخدام توقيع debug للإصدار (للاختبار)
             signingConfig = signingConfigs.getByName("debug")
-        }
-
-        // نوع التصحيح (Debug) - يستخدم توقيع debug تلقائياً
-        debug {
-            isMinifyEnabled = false
         }
     }
 
-    // تجاهل أخطاء Lint لمنع فشل البناء
     lint {
         abortOnError = false
         checkReleaseBuilds = false
