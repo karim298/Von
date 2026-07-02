@@ -46,7 +46,12 @@ class SearchActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         adapter = NovelAdapter { novel ->
-            startActivity(DetailActivity.newIntent(this, novel.articleId, novel))
+            try {
+                startActivity(DetailActivity.newIntent(this, novel.articleId, novel))
+            } catch (e: Exception) {
+                Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
+                e.printStackTrace()
+            }
         }
         recyclerView.adapter = adapter
 

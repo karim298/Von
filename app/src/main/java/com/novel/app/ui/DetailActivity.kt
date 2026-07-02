@@ -33,6 +33,7 @@ import java.io.Serializable
 class DetailActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_MANAGE_STORAGE = 1001
+
         fun newIntent(context: Context, articleId: String, novel: Novel): Intent {
             val intent = Intent(context, DetailActivity::class.java)
             intent.putExtra("article_id", articleId)
@@ -53,20 +54,32 @@ class DetailActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_detail)
-        prefs = PreferencesService(this)
-        translationEnabled = prefs.isTranslationEnabled()
-        articleId = intent.getStringExtra("article_id") ?: ""
 
-        // إصلاح التحويل باستخدام as?
-        novel = intent.getSerializableExtra("novel") as? Novel ?: run {
+        // =============================================================
+        // استقبال البيانات مع معالجة الأخطاء
+        // =============================================================
+        try {
+            articleId = intent.getStringExtra("article_id") ?: ""
+            novel = intent.getSerializableExtra("novel") as? Novel ?: run {
+                Toast.makeText(this, "بيانات الرواية غير صالحة", Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "خطأ في قراءة البيانات: ${e.message}", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
+        setContentView(R.layout.activity_detail)
+
+        prefs = PreferencesService(this)
+        translationEnabled = prefs.isTranslationEnabled()
+
         titleView = findViewById(R.id.detailTitle)
         introView = findViewById(R.id.detailIntro)
         btnDownload = findViewById(R.id.btnDownload)
+
         findViewById<TextView>(R.id.detailAuthor).text = "✍️ ${novel.author}"
         findViewById<TextView>(R.id.detailChaptersCount).text = "${novel.chaptersCount} فصل"
         titleView.text = novel.title
@@ -123,6 +136,10 @@ class DetailActivity : AppCompatActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
+    // =============================================================
+    // الفصول الداخلية (AsyncTasks وغيرها)
+    // =============================================================
 
     inner class LoadChaptersTask : AsyncTask<String, Void, List<Chapter>?>() {
         override fun doInBackground(vararg params: String): List<Chapter>? {
@@ -190,6 +207,10 @@ class DetailActivity : AppCompatActivity() {
             val textView: TextView = view.findViewById(android.R.id.text1)
         }
     }
+
+    // =============================================================
+    // دوال الأذونات والتحميل
+    // =============================================================
 
     private fun checkStoragePermissionAndDownload() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
