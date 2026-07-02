@@ -30,8 +30,22 @@ jobs:
     - name: Build APK
       run: ./gradlew assembleRelease --no-daemon
 
+    - name: Find and verify APK
+      id: find_apk
+      run: |
+        echo "🔍 Searching for APK files..."
+        find app/build/outputs/apk -name "*.apk" -type f
+        APK_PATH=$(find app/build/outputs/apk -name "*.apk" -type f | head -n 1)
+        if [ -z "$APK_PATH" ]; then
+          echo "❌ No APK found!"
+          exit 1
+        fi
+        echo "✅ Found APK at: $APK_PATH"
+        echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+        echo "APK_SIZE=$(du -h "$APK_PATH" | cut -f1)" >> $GITHUB_OUTPUT
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-release
-        path: app/build/outputs/apk/release/app-release.apk
+        path: ${{ steps.find_apk.outputs.apk_path }}
