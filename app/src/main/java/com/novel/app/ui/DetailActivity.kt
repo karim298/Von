@@ -57,6 +57,8 @@ class DetailActivity : AppCompatActivity() {
         prefs = PreferencesService(this)
         translationEnabled = prefs.isTranslationEnabled()
         articleId = intent.getStringExtra("article_id") ?: ""
+
+        // إصلاح التحويل باستخدام as?
         novel = intent.getSerializableExtra("novel") as? Novel ?: run {
             finish()
             return
