@@ -85,7 +85,7 @@ class SearchActivity : AppCompatActivity() {
     }
 
     // =============================================================
-    // مهام الخلفية (AsyncTasks)
+    // مهام الخلفية
     // =============================================================
 
     inner class SearchTask : AsyncTask<String, Void, List<Novel>?>() {
@@ -133,7 +133,7 @@ class SearchActivity : AppCompatActivity() {
     }
 
     // =============================================================
-    // NovelAdapter - المحول الرئيسي
+    // NovelAdapter - المحول الرئيسي (inner class)
     // =============================================================
 
     inner class NovelAdapter(private val onItemClick: (Novel) -> Unit) :
@@ -156,7 +156,7 @@ class SearchActivity : AppCompatActivity() {
         }
 
         // =============================================================
-        // NovelViewHolder - حامل العنصر
+        // NovelViewHolder - حامل العنصر (inner class)
         // =============================================================
 
         inner class NovelViewHolder(
@@ -185,7 +185,7 @@ class SearchActivity : AppCompatActivity() {
         }
 
         // =============================================================
-        // NovelDiffCallback - مقارنة العناصر
+        // NovelDiffCallback - كلاس مستقل داخل NovelAdapter
         // =============================================================
 
         class NovelDiffCallback : DiffUtil.ItemCallback<Novel>() {
