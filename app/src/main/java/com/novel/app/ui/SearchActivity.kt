@@ -2,14 +2,22 @@ package com.novel.app.ui
 
 import android.os.AsyncTask
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.novel.app.R
 import com.novel.app.models.Novel
 import com.novel.app.network.ApiClient
@@ -66,7 +74,7 @@ class SearchActivity : AppCompatActivity() {
             } else {
                 translatedTitles.clear()
                 translatedIntros.clear()
-                adapter.notifyDataSetChanged()
+                adapter.submitList(adapter.currentList)
             }
             invalidateOptionsMenu()
             return true
@@ -114,19 +122,15 @@ class SearchActivity : AppCompatActivity() {
         }
 
         override fun onPostExecute(result: Void?) {
-            adapter.notifyDataSetChanged()
+            adapter.submitList(adapter.currentList)
         }
     }
 
+    // =============================================================
+    // NovelAdapter - تعريفه داخل class SearchActivity
+    // =============================================================
     inner class NovelAdapter(private val onItemClick: (Novel) -> Unit) :
-        androidx.recyclerview.widget.ListAdapter<Novel, NovelAdapter.NovelViewHolder>(
-            object : androidx.recyclerview.widget.DiffUtil.ItemCallback<Novel>() {
-                override fun areItemsTheSame(oldItem: Novel, newItem: Novel) =
-                    oldItem.articleId == newItem.articleId
-                override fun areContentsTheSame(oldItem: Novel, newItem: Novel) =
-                    oldItem == newItem
-            }
-        ) {
+        ListAdapter<Novel, NovelAdapter.NovelViewHolder>(NovelDiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NovelViewHolder {
             val view = LayoutInflater.from(parent.context)
@@ -143,30 +147,42 @@ class SearchActivity : AppCompatActivity() {
             }
             holder.bind(novel, title)
         }
-    }
 
-    class NovelViewHolder(
-        itemView: android.view.View,
-        private val onItemClick: (Novel) -> Unit
-    ) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
+        // ViewHolder الداخلي
+        inner class NovelViewHolder(
+            itemView: View,
+            private val onItemClick: (Novel) -> Unit
+        ) : RecyclerView.ViewHolder(itemView) {
 
-        private val cover: android.widget.ImageView = itemView.findViewById(R.id.coverImage)
-        private val titleView: android.widget.TextView = itemView.findViewById(R.id.novelTitle)
-        private val authorView: android.widget.TextView = itemView.findViewById(R.id.novelAuthor)
-        private val chaptersView: android.widget.TextView = itemView.findViewById(R.id.novelChapters)
+            private val cover: ImageView = itemView.findViewById(R.id.coverImage)
+            private val titleView: TextView = itemView.findViewById(R.id.novelTitle)
+            private val authorView: TextView = itemView.findViewById(R.id.novelAuthor)
+            private val chaptersView: TextView = itemView.findViewById(R.id.novelChapters)
 
-        fun bind(novel: Novel, title: String) {
-            titleView.text = title
-            authorView.text = "✍️ ${novel.author}"
-            chaptersView.text = "📚 ${novel.chaptersCount} فصل"
+            fun bind(novel: Novel, title: String) {
+                titleView.text = title
+                authorView.text = "✍️ ${novel.author}"
+                chaptersView.text = "📚 ${novel.chaptersCount} فصل"
 
-            com.bumptech.glide.Glide.with(itemView.context)
-                .load(ApiClient.getCoverUrl(novel.articleId))
-                .placeholder(R.drawable.ic_book_placeholder)
-                .error(R.drawable.ic_book_placeholder)
-                .into(cover)
+                Glide.with(itemView.context)
+                    .load(ApiClient.getCoverUrl(novel.articleId))
+                    .placeholder(R.drawable.ic_book_placeholder)
+                    .error(R.drawable.ic_book_placeholder)
+                    .into(cover)
 
-            itemView.setOnClickListener { onItemClick(novel) }
+                itemView.setOnClickListener { onItemClick(novel) }
+            }
+        }
+
+        // DiffUtil Callback
+        class NovelDiffCallback : DiffUtil.ItemCallback<Novel>() {
+            override fun areItemsTheSame(oldItem: Novel, newItem: Novel): Boolean {
+                return oldItem.articleId == newItem.articleId
+            }
+
+            override fun areContentsTheSame(oldItem: Novel, newItem: Novel): Boolean {
+                return oldItem == newItem
+            }
         }
     }
 }

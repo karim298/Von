@@ -6,6 +6,7 @@ import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -40,6 +41,7 @@ class ReaderActivity : AppCompatActivity() {
     private var originalContent = ""
     private var translationEnabled = false
     private var isTranslated = false
+    private var isFullScreen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,22 +102,32 @@ class ReaderActivity : AppCompatActivity() {
     }
 
     private fun toggleFullScreen() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.insetsController?.let { controller ->
-                if (controller.isSystemBarsVisible) {
+        isFullScreen = !isFullScreen
+        if (isFullScreen) {
+            // إخفاء شريط الحالة وشريط التنقل
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.insetsController?.let { controller ->
                     controller.hide(android.view.WindowInsets.Type.statusBars())
                     controller.hide(android.view.WindowInsets.Type.navigationBars())
-                } else {
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+            }
+        } else {
+            // إظهار شريط الحالة وشريط التنقل
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.insetsController?.let { controller ->
                     controller.show(android.view.WindowInsets.Type.statusBars())
                     controller.show(android.view.WindowInsets.Type.navigationBars())
                 }
-            }
-        } else {
-            val flags = window.decorView.systemUiVisibility
-            window.decorView.systemUiVisibility = if (flags and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
-                flags or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             } else {
-                flags and (View.SYSTEM_UI_FLAG_FULLSCREEN.inv() and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION.inv())
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             }
         }
     }
