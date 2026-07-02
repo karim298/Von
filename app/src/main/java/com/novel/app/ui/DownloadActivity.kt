@@ -66,10 +66,12 @@ class DownloadActivity : AppCompatActivity() {
         btnStart = findViewById(R.id.btnStartDownload)
 
         if (chapters.isEmpty()) {
-            statusText.text = "لا توجد فصول"
+            statusText.text = "❌ لا توجد فصول للتحميل"
             btnStart.isEnabled = false
+            btnStart.text = "غير متاح"
         } else {
-            statusText.text = "عدد الفصول: ${chapters.size}"
+            statusText.text = "📚 عدد الفصول: ${chapters.size}"
+            btnStart.isEnabled = true
             btnStart.setOnClickListener {
                 DownloadTask().execute()
             }
@@ -81,6 +83,7 @@ class DownloadActivity : AppCompatActivity() {
 
         override fun onPreExecute() {
             btnStart.isEnabled = false
+            btnStart.text = "جاري..."
             statusText.text = "جاري التحميل..."
             progressBar.max = chapters.size
             progressBar.progress = 0
@@ -89,6 +92,7 @@ class DownloadActivity : AppCompatActivity() {
 
         override fun doInBackground(vararg params: Void): Uri? {
             return try {
+                // تحميل الغلاف
                 var coverBytes: ByteArray? = null
                 try {
                     val coverUrl = ApiClient.getCoverUrl(articleId)
@@ -102,16 +106,22 @@ class DownloadActivity : AppCompatActivity() {
                 } catch (_: Exception) {
                 }
 
+                // تحميل محتوى الفصول
                 val chapterData = mutableListOf<Map<String, String>>()
                 for ((index, ch) in chapters.withIndex()) {
-                    val content = ApiClient.getChapterContent(articleId, ch.id)
-                    val extracted = TextCleaner.extractTitleFromFirstLine(content)
-                    val name = extracted?.first ?: ch.name
-                    val cleanContent = extracted?.second ?: content
-                    chapterData.add(mapOf("name" to name, "content" to cleanContent))
+                    try {
+                        val content = ApiClient.getChapterContent(articleId, ch.id)
+                        val extracted = TextCleaner.extractTitleFromFirstLine(content)
+                        val name = extracted?.first ?: ch.name
+                        val cleanContent = extracted?.second ?: content
+                        chapterData.add(mapOf("name" to name, "content" to cleanContent))
+                    } catch (e: Exception) {
+                        chapterData.add(mapOf("name" to ch.name, "content" to "[فشل تحميل هذا الفصل: ${e.message}]"))
+                    }
                     publishProgress(index + 1)
                 }
 
+                // إنشاء ملف EPUB
                 EpubGenerator(this@DownloadActivity).generate(
                     title,
                     author,
@@ -135,13 +145,15 @@ class DownloadActivity : AppCompatActivity() {
 
         override fun onPostExecute(result: Uri?) {
             btnStart.isEnabled = true
+            btnStart.text = "بدء التحميل"
             if (result != null) {
                 statusText.text = "✅ تم الحفظ في: $result"
                 progressPercent.text = "100%"
-                Toast.makeText(this@DownloadActivity, "تم الحفظ بنجاح", Toast.LENGTH_LONG).show()
+                progressBar.progress = progressBar.max
+                Toast.makeText(this@DownloadActivity, "تم الحفظ بنجاح ✅", Toast.LENGTH_LONG).show()
             } else {
                 statusText.text = "❌ فشل التحميل: ${error ?: "خطأ غير معروف"}"
-                Toast.makeText(this@DownloadActivity, "فشل التحميل", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@DownloadActivity, "فشل التحميل ❌", Toast.LENGTH_SHORT).show()
             }
         }
     }

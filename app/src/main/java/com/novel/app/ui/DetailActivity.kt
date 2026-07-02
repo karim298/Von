@@ -48,16 +48,16 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var chapterAdapter: ChapterAdapter
     private lateinit var prefs: PreferencesService
     private var translationEnabled = false
+    private var isChaptersLoaded = false  // 🔑 متغير لتتبع حالة تحميل الفصول
+
     private lateinit var titleView: TextView
     private lateinit var introView: TextView
+    private lateinit var btnRead: Button
     private lateinit var btnDownload: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // =============================================================
-        // استقبال البيانات مع معالجة الأخطاء
-        // =============================================================
         try {
             articleId = intent.getStringExtra("article_id") ?: ""
             novel = intent.getSerializableExtra("novel") as? Novel ?: run {
@@ -78,7 +78,13 @@ class DetailActivity : AppCompatActivity() {
 
         titleView = findViewById(R.id.detailTitle)
         introView = findViewById(R.id.detailIntro)
+        btnRead = findViewById(R.id.btnRead)
         btnDownload = findViewById(R.id.btnDownload)
+
+        // تعطيل الأزرار مؤقتاً حتى تحميل الفصول
+        btnRead.isEnabled = false
+        btnRead.text = "جاري التحميل..."
+        btnDownload.isEnabled = false
 
         findViewById<TextView>(R.id.detailAuthor).text = "✍️ ${novel.author}"
         findViewById<TextView>(R.id.detailChaptersCount).text = "${novel.chaptersCount} فصل"
@@ -97,17 +103,29 @@ class DetailActivity : AppCompatActivity() {
             adapter = chapterAdapter
         }
 
+        // بدء تحميل الفصول
         LoadChaptersTask().execute(articleId)
 
-        findViewById<Button>(R.id.btnRead).setOnClickListener {
-            if (chapters.isNotEmpty()) {
+        // الأزرار - سيتم تفعيلها بعد تحميل الفصول
+        btnRead.setOnClickListener {
+            if (isChaptersLoaded && chapters.isNotEmpty()) {
                 ReaderActivity.start(this, articleId, chapters, novel.title)
+            } else if (!isChaptersLoaded) {
+                Toast.makeText(this, "جاري تحميل الفصول...", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "لا توجد فصول", Toast.LENGTH_SHORT).show()
             }
         }
 
-        btnDownload.setOnClickListener { checkStoragePermissionAndDownload() }
+        btnDownload.setOnClickListener {
+            if (isChaptersLoaded && chapters.isNotEmpty()) {
+                checkStoragePermissionAndDownload()
+            } else if (!isChaptersLoaded) {
+                Toast.makeText(this, "جاري تحميل الفصول...", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "لا توجد فصول للتحميل", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         if (translationEnabled && novel.title.isNotEmpty()) {
             TranslateInfoTask().execute()
@@ -138,9 +156,8 @@ class DetailActivity : AppCompatActivity() {
     }
 
     // =============================================================
-    // الفصول الداخلية (AsyncTasks وغيرها)
+    // LoadChaptersTask - تحميل قائمة الفصول
     // =============================================================
-
     inner class LoadChaptersTask : AsyncTask<String, Void, List<Chapter>?>() {
         override fun doInBackground(vararg params: String): List<Chapter>? {
             return try {
@@ -151,15 +168,26 @@ class DetailActivity : AppCompatActivity() {
         }
 
         override fun onPostExecute(result: List<Chapter>?) {
+            // تفعيل الأزرار بعد تحميل الفصول
+            btnRead.isEnabled = true
+            btnRead.text = "قراءة"
+            btnDownload.isEnabled = true
+
             if (result != null && result.isNotEmpty()) {
                 chapters = result
                 chapterAdapter.submitList(chapters)
+                isChaptersLoaded = true
+                Toast.makeText(this@DetailActivity, "تم تحميل ${chapters.size} فصل", Toast.LENGTH_SHORT).show()
             } else {
+                isChaptersLoaded = false
                 Toast.makeText(this@DetailActivity, "فشل تحميل الفصول", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    // =============================================================
+    // TranslateInfoTask - ترجمة المعلومات
+    // =============================================================
     inner class TranslateInfoTask : AsyncTask<Void, Void, Pair<String, String>?>() {
         override fun doInBackground(vararg params: Void): Pair<String, String>? {
             return try {
@@ -179,12 +207,13 @@ class DetailActivity : AppCompatActivity() {
                 if (result.second.isNotEmpty()) {
                     introView.text = result.second
                 }
-            } else {
-                Toast.makeText(this@DetailActivity, "فشل الترجمة", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    // =============================================================
+    // ChapterAdapter - محول عرض الفصول
+    // =============================================================
     inner class ChapterAdapter :
         androidx.recyclerview.widget.ListAdapter<Chapter, ChapterAdapter.ChapterViewHolder>(
             object : androidx.recyclerview.widget.DiffUtil.ItemCallback<Chapter>() {
@@ -211,7 +240,6 @@ class DetailActivity : AppCompatActivity() {
     // =============================================================
     // دوال الأذونات والتحميل
     // =============================================================
-
     private fun checkStoragePermissionAndDownload() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!android.os.Environment.isExternalStorageManager()) {
@@ -263,6 +291,10 @@ class DetailActivity : AppCompatActivity() {
     }
 
     private fun startDownloadActivity() {
+        if (!isChaptersLoaded || chapters.isEmpty()) {
+            Toast.makeText(this, "لا توجد فصول للتحميل", Toast.LENGTH_SHORT).show()
+            return
+        }
         startActivity(
             DownloadActivity.newIntent(
                 this,
